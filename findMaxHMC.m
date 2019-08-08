@@ -1,8 +1,8 @@
 function [bestThetaMAP,bestThetaMat] = findMaxHMC(logpdf,numParam,useNumGrad)
 
-% Returns several local maxima. 
+% Returns one or several local maxima. 
 
-numStarts = 10;
+numStarts = 5;
 bestThetaMat = zeros(numParam,numStarts);
 maxPdfVal = -Inf;
 for j = 1:numStarts

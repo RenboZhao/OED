@@ -1,11 +1,10 @@
-function logPost = getLogPosterior(x,y,candModel,noiseVar,logPrior)
+function candModel = getLogPosterior(x,y,candModel,noiseVar)
 
-numCand = length(logPrior);
-logPost = cell(1,numCand);
+numCand = length(candModel);
 for i = 1:numCand
-    model = candModel{i};
+    model = candModel{i}.func;
     logLik = @(theta) -(y-model(theta,x))^2/(2*noiseVar);
-    logPost{i} = @(theta) logPrior{i}(theta) + logLik(theta);
+    candModel{i}.logpdf = @(theta) candModel{i}.logpdf(theta) + logLik(theta);  % prior -> posterior
 end
 
 end
