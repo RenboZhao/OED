@@ -1,0 +1,32 @@
+\begin{thebibliography}{4}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Borth(1975)]{Borth_75}
+D.~M. Borth.
+\newblock A total entropy criterion for the dual problem of model
+  discrimination and parameter estimation.
+\newblock \emph{J. Royal Stat. Soc. Ser. B}, 37\penalty0 (1):\penalty0 77--87,
+  1975.
+
+\bibitem[Box and Hill(1967)]{Box_67}
+G.~E.~P. Box and W.~J. Hill.
+\newblock Discrimination among mechanistic models.
+\newblock \emph{Technometrics}, 9\penalty0 (1):\penalty0 57--71, 1967.
+
+\bibitem[Drovandi et~al.(2014)Drovandi, McGree, and Pettitt]{Drov_14}
+C.~C. Drovandi, J.~M. McGree, and A.~N. Pettitt.
+\newblock A sequential monte carlo algorithm to incorporate model uncertainty
+  in bayesian sequential design.
+\newblock \emph{J. Comput. Gr. Stat.}, 23\penalty0 (1):\penalty0 3--24, 2014.
+
+\bibitem[Vanlier et~al.(2014)Vanlier, Tiemann, Hilbers, and van Riel]{Van_14}
+J.~Vanlier, C.~A. Tiemann, P.~A. Hilbers, and N.~A. van Riel.
+\newblock Optimal experiment design for model selection in biochemical
+  networks.
+\newblock \emph{BMC Syst. Biol.}, 8\penalty0 (1), 2014.
+
+\end{thebibliography}

@@ -1,0 +1,244 @@
+\documentclass[11pt]{article}
+\title{Description}
+\input{preamble}
+\date{}
+%\usepackage{fullpage}
+\numberwithin{equation}{section}
+\usepackage[left=1in,right=1in,top=1in,bottom=1in,footskip=.25in]{geometry}
+\usepackage[colorlinks,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage{natbib}
+\begin{document}
+\maketitle
+
+
+
+\section{Problem Setup}
+Denote the design (input) space as $\calX$. 
+Given $M$ models $\{\calM_i\}_{i=1}^M$, each with parameters $\theta_i%\defeq \{\theta_j\}_{j=1}^{M_i}
+\subseteq \Theta_i$ and prior distribution $p(\calM_i)$, we first give each $\theta_i$ a (multivariate Gaussian) prior $p(\theta_i|\calM_i)$. For simplicity, we assume that one of $\{\calM_i\}_{i=1}^M$ is the ground-truth, i.e., $\calM_{\rm true}$.
+
+
+\section{Input Selection Criterion: Model Selection}
+
+\subsection{Method 1: {\tt getSelCritLogDet.m}}\label{sec:method_1}
+We first draw several samples from the density $p(\theta_i|\calM_i)$, denoted by $\{\theta_i^s\}_{s=1}^{K_i}$,  using MCMC (specifically, HMC). (As an alternative approach, we can find a local minimum of $p(\theta_i|\calM_i)$, denoted by $\theta_i^{\rm MAP}$, using HMC.)
+Then, we estimate the response $y_{i}^s(x) \defeq \calM_i(x;\theta_i^s)+\epsilon_{i}^s$, where $\{\epsilon_{i}^s\}_{i\in[M],s\in[K_i]}\iidsim\calN(0,\sigma_\rmn^2)$. Thus $y_{i}^s(x) \sim \calN(\calM_i(x;\theta_i^s),\sigma_\rmn^2)$. For any $(i,s)\in[M]\times[K_i]$ and $(j,t)\in[M]\times[K_j]$, compute
+\begin{align*}
+D_{(i,s),(j,t)}(x) &\defeq D_{\rm KL}\left(\calN(\calM_i(x;\theta_i^s),\sigma_\rmn^2),\calN(\calM_j(x;\theta_j^t),\sigma_\rmn^2)\right)\\
+&= \frac{\left(\calM_i(x;\theta_i^s),\sigma_\rmn^2) - \calM_j(x;\theta_j^t),\sigma_\rmn^2)\right)^2}{2\sigma_\rmn^2}. 
+\end{align*}
+We choose the design point $x^*$ to be a local minimum of 
+\begin{align*}
+S(x) \defeq -\log\det D(x). 
+\end{align*}
+
+\subsection{Method 2: {\tt getSelCritJSDiv.m}} \label{sec:JSDiv}
+This method was proposed in~\cite{Van_14}. The first step is the same as those in Section~\ref{sec:method_1}, i.e., we draw several samples from the density $p(\theta_i|\calM_i)$, denoted by $\{\theta_i^s\}_{s=1}^{K_i}$,  using HMC. For each model $\calM_i$, we aim to find the distribution   of the its predicted response given $x$, i.e., 
+\begin{equation*}
+p(y|\calM_i,x)=\int_{\Theta_i} p(y|\theta_i,\calM_i,x)p(\theta_i|\calM_i)\;{\rm d} \theta_i,\nt\label{eq:pred_dist}
+\end{equation*}
+where (assuming the noise variance $\sigma_\rmn^2$ is known)
+\begin{align*}
+p\left(y|\theta_i,\calM_i,x\right) = \frac{1}{\sqrt{2\pi\sigma_\rmn^2}}\exp\left\{ -\frac{\left(y-\calM_i(x;\theta_i)\right)^2}{2\sigma_\rmn^2}\right\}. \label{eq:lik_model_theta}
+\end{align*}
+We can approximate this density using the samples $\{\theta_i^s\}_{s=1}^{K_i}$, i.e.,
+\begin{equation}
+p(y|\calM_i,x)\approx \hatp(y|\calM_i,x)\defeq \frac{1}{K_i}\sum_{s=1}^{K_i} p(y|\theta_i^s,\calM_i,x) = \frac{1}{K_i}\sum_{s=1}^{K_i} \calN(y|\calM_i(x;\theta_i^s),\sigma_\rmn^2).\label{eq:approx_resp_dist}
+\end{equation}
+Such an approximation also gives us
+\begin{align}
+\nabla_x p(y|\calM_i,x)&\approx \nabla_x \hatp(y|\calM_i,x)\nn\\
+&=\frac{1}{K_i}\sum_{s=1}^{K_i} \calN(y|\calM_i(x;\theta_i^s),\sigma_\rmn^2)\left(\frac{y-\calM_i(x;\theta_i^s)}{\sigma_\rmn^2}\right)\nabla_x \calM_i(x;\theta_i^s).\label{eq:approx_resp_dist_grad}
+\end{align}
+%where 
+Let us define the averaged predictive distribution $p(y|x)$ from all the $M$ models, i.e.,
+\begin{equation}
+p(y|x) = \sum_{i=1}^M p(\calM_i)p(y|\calM_i,x). \label{eq:ave_pred_dist}
+\end{equation} 
+The OED criterion is based on the Jensen-Shannon divergence (JSD), i.e.,  %, for example. 
+\begin{align}
+D_{\rm JS}(x) \defeq \sum_{i=1}^M p(\calM_i) D_{\rm KL}\big(p(y|\calM_i,x)\Vert p(y|x)\big).\label{eq:JSD}
+\end{align}
+To approximate the KL-divergence in~\eqref{eq:JSD}, for each $i\in[M]$, we first draw $N_i$ samples from $p(y|\calM_i,x)$ (in fact, $\hatp(y|\calM_i,x)$) using MCMC, which are denoted by $\{y_i^t\}_{t=1}^{N_i}$, so that
+\begin{align}
+D_{\rm KL}\big(p(y|\calM_i,x)\Vert p(y|x)\big)\approx \hatD_{\rm KL}\big(p(y|\calM_i,x)\Vert p(y|x)\big)\defeq \frac{1}{N_i}\sum_{t=1}^{N_i} \frac{p(y_{i}^t|\calM_i,x)}{p(y_i^t|x)}. 
+\end{align}
+This gives us 
+\begin{align}
+&\quad\; \nabla_x D_{\rm JS}(x)\nn\\
+&= \sum_{i=1}^M p(\calM_i) \nabla_x D_{\rm KL}\big(p(y|\calM_i,x)\Vert p(y|x)\big)\nn\\
+%&=\sum_{i=1}^M p(\calM_i)\nabla_x D_{\rm KL}\big(p(y|\calM_i,x)\Vert p(y|x)\big)\nn\\
+&\approx \sum_{i=1}^M p(\calM_i)\nabla_x \hatD_{\rm KL}\big(p(y|\calM_i,x)\Vert p(y|x)\big)\nn\\
+&= \sum_{i=1}^M \frac{p(\calM_i)}{N_i}\sum_{t=1}^{N_i} \frac{p(y_i^t|x)\nabla_x p(y_{i}^t|\calM_i,x)-p(y_{i}^t|\calM_i,x)\nabla_x p(y_i^t|x)}{p(y_i^t|x)^2}\nn\\
+&= \sum_{i=1}^M \frac{p(\calM_i)}{N_i}\sum_{t=1}^{N_i}\sum_{j=1}^{M} p(\calM_j) \frac{p(y_i^t|\calM_j,x)\nabla_x p(y_{i}^t|\calM_i,x)-p(y_{i}^t|\calM_i,x)\nabla_x p(y_i^t|\calM_j,x)}{p(y_i^t|x)^2}.
+\end{align}
+Thus ideally, given any $x\in\calX$, if we can (approximately) evaluate $\{p(y|\calM_i,x)\}_{i=1}^M$ and $\{\nabla_x p(y|\calM_i,x)\}_{i=1}^M$ for any $y\in\calY$, we can approximate both $D_{\rm JS}(x)$ and $\nabla_x D_{\rm JS}(x)$.  Then we can use first-order methods to find a local maximum of $D_{\rm JS}(x)$ on $\calX$, denoted by $x^*$.
+However, evaluating these values and gradients in turn requires drawing (typically a large number of) samples of $\theta_i$ for each model $\calM_i$, as shown in~\eqref{eq:approx_resp_dist} and~\eqref{eq:approx_resp_dist_grad}.  
+
+
+\subsection{Method 3: {\tt getSelCritJSDivU.m}}
+Note that Method 1 in Section~\ref{sec:method_1} is ad-hoc and not well-justified. A  more principled approach would be as follows. We first approximate $p(y|\calM_i,x)$ for each model $\calM_i$ as in~\eqref{eq:approx_resp_dist}. Then, instead of using the JSD criterion as in~\eqref{eq:JSD}, we use the weighted sum of pairwise KL divergences of $\{p(y|\calM_i,x)\}_{i=1}^M$. 
+%the log-determinant criterion in Section~\ref{sec:method_1}. 
+Specifically, define
+\begin{equation}
+\tilD_{\rm KL}(x) \defeq \sum_{i,j=1,i\ne j}^M p(\calM_i)p(\calM_j) D_{\rm KL}\big(p(y|\calM_i,x)\Vert\, p(y|\calM_j,x)\big),
+\end{equation}
+and we
+% define $\tilD_{ij}(x)\defeq D_{\rm JS} (p(y|\calM_i,x)\Vert\, p(y|\calM_j,x))$ and 
+find a local maximum of $\tilD_{\rm KL}(x)$ on $\calX$. Note that by Jensen's inequality, $\tilD_{\rm KL}(x)\ge D_{\rm JS}(x)$, for any $x\in\calX$. 
+
+Indeed, this criterion was proposed in~\cite{Box_67}, and represents the expected entropy reduction from performing the experiment at $x\in\calX$. 
+
+\subsection{Method 4: Based on Mutual Information}\label{sec:MICriterion}
+This approach was proposed in~\cite{Drov_14}. For any $x\in\calX$, define its response by% (random variable) by 
+\begin{align*}
+y(x) \defeq \calM^*(x) + \epsilon,\nt\label{eq:data_gen_true}
+\end{align*}
+where $\calM^*$ denotes the (unknown) true model and $\epsilon\sim\calN(0,\sigma_\rmn^2)$. Let $\calM\in\{\calM_i\}_{i=1}^M$ be the estimate of $\calM^*$. %(Note that we implicitly assume that $\calM^*\in\{\calM_i\}_{i=1}^M$) 
+We aim to select $x\in\calX$ to maximize the mutual information between $\calM$ and $y(x)$ (written as $y$ in the sequel), i.e.,
+\begin{align}
+x^*\in\argmax_{x\in\calX} \;\big\{I(\calM;y|x) = H(\calM|x) - H(\calM|y,x)  = H(\calM) - H(\calM|y,x)\big\}. 
+\end{align}
+%where $\eqcst$ denotes equality up to constant. 
+Equivalently, we have
+\begin{align}
+x^* \in \argmin_{x\in\calX} \; H(\calM|y,x). 
+\end{align}
+This means we choose $x\in\calX$ such that given its response $y$, the remaining uncertainty in the model estimate $\calM$ is minimized. 
+By definition,
+\begin{align*}
+- H(\calM|y,x) &= \int_{\calY}\left\{\sum_{i=1}^M p(\calM_i|y,x) \log p(\calM_i|y,x)\right\} p(y|x) \rmd y\\
+&= \sum_{i=1}^M \int_{\calY} p(\calM_i,y|x) \log p(\calM_i|y,x)  \rmd y\\
+&= \sum_{i=1}^M p(\calM_i)\int_{\calY} p(y|\calM_i,x) \log p(\calM_i|y,x)  \rmd y.\nt\label{eq:cond_entropy}
+\end{align*}
+Note that in~\eqref{eq:cond_entropy}, $p(y|\calM_i,x)$ is the predicative distribution of $\calM_i$, given in~\eqref{eq:pred_dist}, and $p(\calM_i|y,x)$ is the posterior distribution of $\calM_i$ given the data point $(x,y)$, which can be obtained from the set of predictive distributions $\{p(y|\calM_i,x)\}_{i=1}^M$ as
+\begin{align*}
+p\left(\calM_i|y,x\right) = \frac{p\left(y|\calM_i,x\right)p(\calM_i)}{\sum_{i=1}^M p\left(y|\calM_i,x\right)p(\calM_i)}. \nt\label{eq:model_posterior}
+\end{align*}
+Therefore, given $\{p(y|\calM_i,x)\}_{i=1}^M$ and $\{p(\calM_i)\}_{i=1}^M$,~\eqref{eq:cond_entropy} can serve as another input selection criterion. 
+
+
+\section{Input Selection Criterion: Joint Model Selection and Parameter Estimation}
+
+We consider designing experiments not only for model selection, but also for estimating the parameters in each model. A simple way to achieve this is to consider the model-parameter pair, i.e., $\{(\calM_i,\theta_i)\}_{\theta_i\in\Theta_i,i\in[M]}$ and their predictive distributions $\{p(y|\calM_i,\theta_i,x)\}_{\theta_i\in\Theta_i,i\in[M]}$. 
+
+\subsection{Method 1: Jensen-Shannon Divergence}
+The criterion in Section~\ref{sec:JSDiv} can be straightforwardly extended here. Specifically, we obtain the averaged predictive distribution $p(y|x)$ in the same way as in~\eqref{eq:ave_pred_dist}. Then the criterion is
+\begin{align*}
+D_{\rm JS}(x) \defeq \sum_{i=1}^n p(\calM_i) \int_{\Theta_i} D_{\rm KL}\big(p(y|\calM_i,\theta_i,x) \Vert p(y|x)\big) p(\theta_i|\calM_i)\; \rmd \theta_i.
+\end{align*}
+
+\subsection{Method 2: {\tt getSelCritMI.m} (Mutual Information)}
+
+We can similarly extend the criterion in Section~\ref{sec:MICriterion} here, i.e.,  we select $x\in\calX$ to maximize the mutual information between $(\calM,\theta)$ and $y$: %(written as $y$ in the sequel), i.e.,
+\begin{align}
+x^*\in\argmax_{x\in\calX} \;\big\{I(\calM,\theta;y|x) = H(\calM,\theta) - H(\calM,\theta|y,x)\big\}. 
+\end{align}
+%where $\eqcst$ denotes equality up to constant. 
+%Equivalently, we have
+%\begin{align}
+%x^* \in \argmin_{x\in\calX} \; H(\calM,\theta|y,x),
+%\end{align}
+%This means we choose $x\in\calX$ such that given its response $y$, the remaining uncertainty in the model estimate $\calM$ is minimized. 
+Indeed, this is the ``total entropy'' criterion used in~\cite{Borth_75}. 
+By definition,
+\begin{align*}
+- H(\calM,\theta|y,x) &= \int_{\calY}\left\{\sum_{i=1}^M \int_{\Theta_i} p(\calM_i,\theta_i|y,x) \log p(\calM_i,\theta_i|y,x)\;\rmd\theta_i\right\} p(y|x) \rmd y\\
+&= \sum_{i=1}^M \int_{\calY}\int_{\Theta_i} p(\calM_i,\theta_i,y|x) \log p(\calM_i,\theta_i|y,x) \;\rmd\theta_i \rmd y\\
+&= \sum_{i=1}^M p(\calM_i)\int_{\calY}\int_{\Theta_i} p(y|\calM_i,\theta_i,x) p(\theta_i|\calM_i) \log p(\calM_i,\theta_i|y,x) \;\rmd \theta_i \rmd y.%\nt\label{eq:cond_entropy}
+\end{align*}
+To obtain $p(\calM_i,\theta_i|y,x)$, we simply invoke the Bayes' rule, i.e.,
+\begin{equation}
+p(\calM_i,\theta_i|y,x) = \frac{p(y|\calM_i,\theta_i,x)p(\theta_i|\calM_i)p(\calM_i)}{p(y|x)},
+\end{equation}
+where $p(y|x)$ is given by~\eqref{eq:ave_pred_dist}. 
+
+To approximate $- H(\calM,\theta|y,x)$, we first write it as 
+\begin{align*}
+- H(\calM,\theta|y,x) \eqcst \int_{\calY}\left\{\sum_{i=1}^M p(\calM_i)\int_{\Theta_i} p(\theta_i|\calM_i,y,x) \log p(\theta_i|\calM_i,y,x)\;\rmd\theta_i\right\} p(y|x) \rmd y,
+\end{align*}
+where $\eqcst$ omits constants that are independent of $x$. Next, from~\eqref{eq:approx_resp_dist} and~\eqref{eq:ave_pred_dist}, we can approximate $p(y|x)$ as
+\begin{align*}
+\hatp(y|x) \defeq \sum_{i=1}^M p(\calM_i)\hatp(y|\calM_i,x). 
+\end{align*} 
+We then draw $N$ samples from $\hatp(y|x)$, denoted by $\{y_t\}_{t=1}^N$, so 
+\begin{align*}
+- H(\calM,\theta|y,x) \approx \frac{1}{N}\sum_{t=1}^N\sum_{i=1}^M p(\calM_i)\int_{\Theta_i} p(\theta_i|\calM_i,y_t,x) \log p(\theta_i|\calM_i,y_t,x)\;\rmd\theta_i.
+\end{align*}
+We the draw $K_i$ samples of $\theta_i$ (denoted by $\{\theta_i^s\}_{s=1}^{K_i}$) from $\hatp(\theta_i|\calM_i,y_t,x)$, where 
+\begin{align*}
+\hatp(\theta_i|\calM_i,y_t,x) \defeq \frac{p(y_t|\calM_i,\theta_i,x)p(\theta_i|\calM_i)}{\hatp(y_t|x)},
+\end{align*}
+so $- H(\calM,\theta|y,x)$ can be further approximate by 
+\begin{align*}
+- H(\calM,\theta|y,x)\approx \frac{1}{N}\sum_{t=1}^N\sum_{i=1}^M \frac{p(\calM_i)}{K_i}\sum_{s=1}^{K_i} \log \hatp(\theta_i^s|\calM_i,y_t,x).\nt
+\end{align*}
+If $K_i=K$, for each $i\in[M]$, then the computational complexity is $O(NMK)$, which is huge. 
+%Note that in~\eqref{eq:cond_entropy}, $p(y|\calM_i,x)$ is the predicative distribution of $\calM_i$, given in~\eqref{eq:pred_dist}, and $p(\calM_i|y,x)$ is the posterior distribution of $\calM_i$ given the data point $(x,y)$, which can be obtained from the set of predictive distributions $\{p(y|\calM_i,x)\}_{i=1}^M$ as
+%\begin{align*}
+%p\left(\calM_i|y,x\right) = \frac{p\left(y|\calM_i,x\right)p(\calM_i)}{\sum_{i=1}^M p\left(y|\calM_i,x\right)p(\calM_i)}. \nt\label{eq:model_posterior}
+%\end{align*}
+%Therefore, given $\{p(y|\calM_i,x)\}_{i=1}^M$ and $\{p(\calM_i)\}_{i=1}^M$,~\eqref{eq:cond_entropy} can serve as another input selection criterion. 
+
+
+%, we again use HMC, i.e., 
+% After estimating the responses $\{y_{i}^s(x)\}_{s=1}^{K_i}$ (corresponding to model $\calM_i$), we use  kernel density estimation to estimate the response distribution as
+%\begin{align*}
+%p(y|\theta_i,\calM_i,x) \approx \frac{1}{K_ih}\sum_{s=1}^{K_i} K\left(\frac{y-y_{i}^s(x)}{h}\right),
+%\end{align*}
+%where $K:\bbR\to\bbR_+$ is the normal kernel and $h$ denotes its bandwidth. 
+
+
+
+%\subsection{Method 3: {\tt getSelCritJSDiv2.m}}
+%
+%
+%%Since the MAP parameter estimate $\theta^{\rm MAP}_i$ may be hard to obtain from $p(\theta_i|\calM_i,\calD)$ (due to non-unimodality), we draw a few sample $\{\theta_i^j\}_{j=1}^{k_i}$ from $p(\theta_i|\calM_i,\calD)$ using MCMC, where $k_i$ denotes the sample size for the $i$-th model. 
+%%Now, for each candidate measurement point $x$, we can predict its response $y^j$ using the sampled parameter $\theta_i^j$, for any $j\in[k_i]$. This gives us a number of samples $\{y^j\}_{j=1}^{k_i}$ from the predicted response distribution 
+%%\begin{equation*}
+%%p(y|\calM_i,\calD,x)=\int_{\Theta_i} p(y|\theta_i,\calM_i,\calD,x)p(\theta_i|\calM_i,\calD){\rm d} \theta_i,
+%%\end{equation*}
+%%where $\Theta_i$ denotes the parameter space for $\calM_i$.
+%   
+%
+% Using the samples $\{y^j\}_{j=1}^{k_i}$, we can approximate $p(y|\calM_i,\calD,x)$ using e.g., kernel density estimation. 
+%As long as the measurement space $\calX$ is finite, we can find $x^*\in\argmax_{x\in\calX}D_{\rm JS}(x)$. 
+
+
+
+\section{Posteriors of Model and Model Parameters}
+Then we simulate the response at $x^*$, i.e., $y(x^*)$ according to~\eqref{eq:data_gen_true}. With the data pair $(x^*,y(x^*))$, we can update the model posterior distribution $p\left(\calM_i|x^*,y(x^*)\right)$ according to~\eqref{eq:model_posterior}. 
+%we obtain the log-likelihood (up to some constants)
+%\begin{align*}
+%\log p\left((x^*,y(x^*))|\theta_i,\calM_i\right) = -\frac{\left(y(x^*)-\calM_i(x^*;\theta_i)\right)^2}{2\sigma_\rmn^2}. 
+%\end{align*}
+%Then the log-posterior (again, up to some constants) is given by 
+%\begin{align*}
+%\log p\left(\theta_i|(x^*,y(x^*)),\calM_i\right) = \log p(\theta_i|\calM_i) + \log p\left((x^*,y(x^*))|\theta_i,\calM_i\right). 
+%\end{align*}
+%In addition, the likelihood of the model $\calM_i$ is 
+%\begin{align*}
+%p\left((x^*,y(x^*))|\calM_i\right) = \int_{\Theta_i} p\left((x^*,y(x^*))|\theta_i,\calM_i\right)p(\theta_i|\calM_i)\,\rmd \theta_i,
+%\end{align*}
+%which again, can be evaluated by HMC. Then we obtain the posterior distribution over $\{\calM_i\}_{i=1}^M$ as
+%\begin{align*}
+%p\left(\calM_i|(x^*,y(x^*))\right) = \frac{p\left((x^*,y(x^*))|\calM_i\right)p(\calM_i)}{\sum_{i=1}^M p\left((x^*,y(x^*))|\calM_i\right)p(\calM_i)}. 
+%\end{align*}
+
+
+\section{Test Model}
+We take equation~(I.24.6) from Feynman's lecture notes, which is 
+\begin{align}
+E = cm^{e_1}(\omega^{e_2}+\omega_0^{e_3})z^{e_4}, \label{eq:true_model} 
+\end{align}
+where $c=1/4$, $e_1=1$ and $e_2=e_3=e_4=2$. 
+This model has four inputs $x\defeq (m,\omega,\omega_0,z)$ and five parameters $\theta\defeq (c,e_1,e_2,e_3,e_4)$. We use three candidate models, the first of which is the ground-truth model in~\eqref{eq:true_model}. The other two models are
+\begin{align}
+E &= cm^{e_1}\omega^{e_2}\omega_0^{e_3}z^{e_4},\\
+E &= cm^{e_1}(\omega^{e_2}+z^{e_4})\omega_0^{e_3}. 
+\end{align}
+We can encode the initial values of the parameters of each model, say $\theta_i$ in $\calM_i$, in the prior distribution $p(\theta_i|\calM_i)$. 
+
+\bibliographystyle{abbrvnat}
+\bibliography{OED}
+\end{document}

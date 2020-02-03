@@ -1,0 +1,11 @@
+\BOOKMARK [1][-]{section.1}{Problem Setup}{}% 1
+\BOOKMARK [1][-]{section.2}{Input Selection Criterion: Model Selection}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{Method 1: getSelCritLogDet.m}{section.2}% 3
+\BOOKMARK [2][-]{subsection.2.2}{Method 2: getSelCritJSDiv.m}{section.2}% 4
+\BOOKMARK [2][-]{subsection.2.3}{Method 3: getSelCritJSDivU.m}{section.2}% 5
+\BOOKMARK [2][-]{subsection.2.4}{Method 4: Based on Mutual Information}{section.2}% 6
+\BOOKMARK [1][-]{section.3}{Input Selection Criterion: Joint Model Selection and Parameter Estimation}{}% 7
+\BOOKMARK [2][-]{subsection.3.1}{Method 1: Jensen-Shannon Divergence}{section.3}% 8
+\BOOKMARK [2][-]{subsection.3.2}{Method 2: getSelCritMI.m \(Mutual Information\)}{section.3}% 9
+\BOOKMARK [1][-]{section.4}{Posteriors of Model and Model Parameters}{}% 10
+\BOOKMARK [1][-]{section.5}{Test Model}{}% 11
